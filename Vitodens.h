@@ -22,16 +22,19 @@ extern "C" {
 class Vitodens
 {
 public:
-	Vitodens(HardwareSerial *pVito,Stream *pDebug);
+	Vitodens(HardwareSerial *pVito);
+//	Vitodens(HardwareSerial *pVito,Stream *pDebug);
   void attach(onMsgFunction newFunction);
   void attach(onValueReadCallbackFunction newFunction);
 	void doEvents();
 	void beginReadValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t LenBit );
 	bool awaitingCommand();
 	bool dataAvailable();
-  uint8_t Data[16];
   
 private:
+  void Msg(uint8_t LogLevel, char* msg);
+	void Msg(uint8_t LogLevel, const uint8_t& theNumber);
+	void Msg(uint8_t LogLevel, const uint8_t& theNumber, const int& Type);
 	enum pStatusEnm{
 	  None,
 	  WaitForConnectionOffer,
@@ -42,16 +45,16 @@ private:
 	} ;
 	pStatusEnm pStatus;
 	HardwareSerial *pVitoS;
-	Stream *pDebug;
+//	Stream *pDebug;
 	uint8_t pAdrBit1; 
 	uint8_t pAdrBit2;
 	uint8_t pLenBit;
 	uint8_t pByteNum;
 	uint32_t pWaitForAnswerSince;
+  uint8_t Data[16];
 
   onMsgFunction currentOnMsg;
   onValueReadCallbackFunction currentonValueReadCallback;
-
 };
 #endif
 

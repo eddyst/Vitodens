@@ -12,6 +12,14 @@
 
 #include "Vitodens.h"
 
+
+Vitodens::Vitodens(HardwareSerial *Vito){
+	pVitoS     = Vito;
+	pStatus    = None;
+	pVitoS->begin(4800, SERIAL_8E2);
+}
+
+/*
 Vitodens::Vitodens(HardwareSerial *Vito,Stream *Debug){
 	Debug->println ( ("OptoInit"));
 	pDebug     = Debug;
@@ -19,17 +27,18 @@ Vitodens::Vitodens(HardwareSerial *Vito,Stream *Debug){
 	pStatus    = None;
 	pVitoS->begin(4800, SERIAL_8E2);
 }
+*/
 
 void Vitodens::doEvents(){
 uint32_t zp = millis();
 	if (zp - pWaitForAnswerSince > 60000) {
-		pDebug->println("pWaitForAnswerSince > 60000");
+		Msg( 1, "pWaitForAnswerSince > 60000");
 		pStatus = None;
-//		currentOnMsg(1,"Test\nZeile2");//Das funktionert - aber Zahlen?
+//		Msg( 1,"Test\nZeile2");//Das funktionert - aber Zahlen?
 	}
   switch ( pStatus) {
   case None:
-    pDebug->println( ( "Status=None,Write0x04,"));
+    Msg( 2, "Status=None,Write0x04,");
     pVitoS->write( 0x04);
     pStatus = WaitForConnectionOffer;
     pWaitForAnswerSince=zp;
@@ -41,15 +50,15 @@ uint32_t zp = millis();
     if ( pVitoS->available()) {
       uint8_t B = pVitoS->read();
       if ( B == 0x05) {
-        pDebug->print( ( "Read0x05,Write0x16_0x00_0x00,"));
+        Msg( 2, ( "Read0x05,Write0x16_0x00_0x00,"));
         pStatus = NotInitialized;
         pVitoS->write( ( uint8_t[]){ 0x16, 0x00, 0x00}, 3);
         pWaitForAnswerSince=zp;
         break;
       }
       else {
-        pDebug->print( ( "Read!0x05=")); 
-        pDebug->println( B, HEX);
+        Msg( 1, ( "Read!0x05=")); 
+        Msg( 1, B, HEX);
       }
     }
     break;
@@ -57,34 +66,26 @@ uint32_t zp = millis();
     if ( pVitoS->available()) {
       uint8_t B = pVitoS->read();
       if ( B == 0x06) {
-        pDebug->print( ( "Read0x06,"));
+        Msg( 2, ( "Read0x06,"));
         pStatus = Initialized;
         pWaitForAnswerSince=zp;
         break;
       }
       else {
-        pDebug->print( ( "Read!0x06=")); 
-        pDebug->println( B, HEX);
+        Msg( 1, ( "Read!0x06=")); 
+        Msg( 1, B, HEX);
       }
     }
     break;
   case Initialized: //Einfach abwarten bis BeginReading kommt
 		break;
 	case BeginReading:
-		pDebug->println();
-		pDebug->print( ( "Status=BeginReading,Write")); 
-		pDebug->print( pAdrBit1,HEX);
-		pDebug->print( ( " ")); 
-		pDebug->print( pAdrBit2,HEX);
-		pDebug->print( ( " ")); 
-		pDebug->print( pLenBit);
-		//      //pDebug->print( ( "h")); //pDebug->print( String( zp));
-		//      if ( BigLog) 
-		//        //pDebug->print( LogCurrentDS;
-		//      else
-		//        //pDebug->print( F( "v";
-		//      LogCurrentDS = "";
-		//      BigLog = false;
+		Msg( 2, ( "\nStatus=BeginReading,Write")); 
+		Msg( 2, pAdrBit1, HEX);
+		Msg( 2, ( " ")); 
+		Msg( 2, pAdrBit2,HEX);
+		Msg( 2, ( " ")); 
+		Msg( 2, pLenBit);
 
 		// Gerätekennung abfragen
 		//    pVitoS->write( ( uint8_t[]){ 0x41, 0x05, 0x00, 0x01, 0x00, 0xF8, 0x02, 0x00}, 8);
@@ -113,107 +114,138 @@ uint32_t zp = millis();
       switch ( pByteNum) {
       case 0:
         if ( B == 0x06) {
-          pDebug->print( ( ">0x06,"));
+          Msg( 2, ( ">0x06,"));
         }
         else {
-          pDebug->print( ( ">!0x06==")); 
-          pDebug->print( B, HEX); //          LogCurrentDS+="P"; LogCurrentDS += String( B, HEX); BigLog = true;
-          pDebug->print( ( ","));
+          Msg( 1, ( ">!0x06==")); 
+          Msg( 1, B, HEX); //          LogCurrentDS+="P"; LogCurrentDS += String( B, HEX); BigLog = true;
+          Msg( 1, ( ","));
           pStatus = None;
         }
         break; 
       case 1: 
         if ( B == 0x41) {
-          pDebug->print( ( ">0x41,"));
+          Msg( 2, ( ">0x41,"));
         }
         else {
-          pDebug->print( ( ">!0x41==")); 
-          pDebug->print( B, HEX); //          LogCurrentDS+="Q"; LogCurrentDS += String( B, HEX); BigLog = true;
-          pDebug->print( ( ","));
+          Msg( 1, ( ">!0x41==")); 
+          Msg( 1, B, HEX); //          LogCurrentDS+="Q"; LogCurrentDS += String( B, HEX); BigLog = true;
+          Msg( 1, ( ","));
           pStatus = None;
         }
         break;
       case 2:
         dataLength = B;
-        pDebug->print( ( "dataLength=")); 
-        pDebug->print( B, HEX);
-        pDebug->print( ( ","));
+        Msg( 2, ( "dataLength=")); 
+        Msg( 2, B, HEX);
+        Msg( 2, ( ","));
         break;
       case 3:
         static uint8_t StateByte1;
         StateByte1 = B;
-        pDebug->print( ( "StateByte1=")); 
-        pDebug->print( B, HEX);
-        pDebug->print( ( ","));
+        Msg( 2, ( "StateByte1=")); 
+        Msg( 2, B, HEX);
+        Msg( 2, ( ","));
         break;
       case 4:
-        pDebug->print( ( "StateByte2="));         
-        pDebug->print( B, HEX);        
-        pDebug->print( ( ","));
+        Msg( 2, ( "StateByte2="));         
+        Msg( 2, B, HEX);        
+        Msg( 2, ( ","));
         static uint8_t StateByte2;
         StateByte2 = B;
         break;
       case 5:
-        pDebug->print( ( "addressByte1="));         
-        pDebug->print( B, HEX);
+        Msg( 2, ( "addressByte1="));         
+        Msg( 2, B, HEX);
         static uint8_t addressByte1;
         addressByte1 = B;
         if ( addressByte1 != pAdrBit1){     //Das ist nicht die Adresse nach der ich gefragt habe
-          pDebug->print( ( "!=erwartet(")); 
-          pDebug->print( pAdrBit1, HEX);
-          pDebug->print( ( ")")); 
+          Msg( 1, ( "!=erwartet(")); 
+          Msg( 1, pAdrBit1, HEX);
+          Msg( 1, ( ")")); 
           pStatus = None;
         }
-        pDebug->print( ( ","));
+        Msg( 2, ( ","));
         break;
       case 6:
-        pDebug->print( ( "addressByte2=")); 
-        pDebug->print( B, HEX);
+        Msg( 2, ( "addressByte2=")); 
+        Msg( 2, B, HEX);
         static uint8_t addressByte2;
         addressByte2 = B;
         if ( addressByte2 != pAdrBit2){     //Das ist nicht die Adresse nach der ich gefragt habe
-          pDebug->print( ( "!=erwartet(")); 
-          pDebug->print( pAdrBit2, HEX);
-          pDebug->print( ( ")")); 
+          Msg( 1, ( "!=erwartet(")); 
+          Msg( 1, pAdrBit2, HEX);
+          Msg( 1, ( ")")); 
           pStatus = None;
         }
-        pDebug->print( ( ","));
+        Msg( 2, ( ","));
         break;
       case 7:
-        pDebug->print( ( "Bytes=")); 
-        pDebug->print( B, HEX);
+        Msg( 2, ( "Bytes=")); 
+        Msg( 2, B, HEX);
         if ( B != pLenBit){     //Bitte klären warum die erwartete Anzahl Bytes nicht stimmt
-          pDebug->print( ( "!=erwartet(")); 
-          pDebug->print( pLenBit, HEX);
-          pDebug->println( ( ")")); 
+          Msg( 1, ( "!=erwartet(")); 
+          Msg( 1, pLenBit, HEX);
+          Msg( 1, ( ")")); 
           pStatus = None;
         }
-        pDebug->print( ( ","));
+        Msg( 2, ( ","));
         someByteChanged = false;
         break;
       default:
         if ( pByteNum < dataLength + 3) {
-          pDebug->print( ( ",Byte")); 
-          pDebug->print( pByteNum); 
-          pDebug->print( ( "="));
-          pDebug->print( B, HEX);
+          Msg( 2, ( ",Byte")); 
+          Msg( 2, pByteNum); 
+          Msg( 2, ( "="));
+          Msg( 2, B, HEX);
           uint8_t lVByte = pByteNum - 8;
           Data[lVByte] = B;
         }
         else {
-          pDebug->print( ( ",CheckSum=")); 
-          pDebug->print( B, HEX);
+          Msg( 2, ( ",CheckSum=")); 
+          Msg( 2, B, HEX);
           //        if ( Prüfsumme falsch)
           //        BIGLog = true;
 					currentonValueReadCallback(pAdrBit1,pAdrBit2,dataLength,Data);
-          //pDebug->println();
-          //optoPrintLastValuesToDebug();
           pStatus = Initialized;
         }
       }
       pByteNum ++;
     }
   }  
+}
+void Vitodens::Msg(uint8_t LogLevel, char* msg){
+  currentOnMsg (LogLevel, msg);
+}
+void Vitodens::Msg(uint8_t LogLevel, const uint8_t& theNumber){
+	Msg( LogLevel, theNumber, DEC);
+}
+void Vitodens::Msg(uint8_t LogLevel, const uint8_t& theNumber, const int& Type){
+	char msg[4];
+  int i = 0;
+	switch (Type) {
+  case HEX:
+		msg[0] = (theNumber >> 4) + 0x30;
+		if (msg[0] > 0x39) msg[0] +=7;
+		msg[1] = (theNumber & 0x0f) + 0x30;
+		if (msg[1] > 0x39) msg[1] +=7;
+		msg[2] = '\0';	
+		break;
+	case DEC:
+		if (theNumber > 99) 
+			msg[i++] =  theNumber                             / 100 + 0x30;
+		if (theNumber > 9)
+		  msg[i++] = (theNumber - (theNumber / 100) * 100 ) /  10 + 0x30;
+		msg[i++] = (theNumber - (theNumber /  10) *  10 )       + 0x30;
+		msg[i] ='\0';	
+		break;
+	default:
+		msg[0]='E';
+		msg[1]='R';
+		msg[2]='R';
+		msg[3]='\0';
+	}
+	currentOnMsg (LogLevel, msg);
 }
 
 void Vitodens::beginReadValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t LenBit ) {
@@ -226,8 +258,6 @@ void Vitodens::beginReadValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t LenBit )
 bool Vitodens::awaitingCommand(){
 	return pStatus == Initialized;
 }
-
-
 
 void Vitodens::attach(onMsgFunction newFunction)
 {
