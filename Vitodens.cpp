@@ -31,6 +31,7 @@ Vitodens::Vitodens(HardwareSerial *Vito,Stream *Debug){
 
 void Vitodens::doEvents(){
 uint32_t zp = millis();
+static 	uint8_t pAdrBit1, pAdrBit2, pLenBit;
 	if (zp - pWaitForAnswerSince > 60000) {
 		Msg( 1, "pWaitForAnswerSince > 60000");
 		pStatus = None;
@@ -42,7 +43,7 @@ uint32_t zp = millis();
     pVitoS->write( 0x04);
     pStatus = WaitForConnectionOffer;
     pWaitForAnswerSince=zp;
-    break;
+//    break;
   case WaitForConnectionOffer:
 	//																																Data[0]=0x07;
 	//																																Data[1]=0x01;
@@ -59,6 +60,7 @@ uint32_t zp = millis();
       else {
         Msg( 1, ( "Read!0x05=")); 
         Msg( 1, B, HEX);
+				pStatus = None;
       }
     }
     break;
@@ -74,28 +76,33 @@ uint32_t zp = millis();
       else {
         Msg( 1, ( "Read!0x06=")); 
         Msg( 1, B, HEX);
+				pStatus = None;
       }
     }
     break;
-  case Initialized: //Einfach abwarten bis BeginReading kommt
+  case Initialized: //Einfach abwarten bis SendDatagram kommt
 		break;
-	case BeginReading:
-		Msg( 2, ( "\nStatus=BeginReading,Write")); 
-		Msg( 2, pAdrBit1, HEX);
+	case SendDatagram:
+		Msg( 2, ( "\nStatus=SendDatagram,Write "));
+		Msg( 2, Data[0], HEX);
 		Msg( 2, ( " ")); 
-		Msg( 2, pAdrBit2,HEX);
-		Msg( 2, ( " ")); 
-		Msg( 2, pLenBit);
-
-		// Gerätekennung abfragen
-		//    pVitoS->write( ( uint8_t[]){ 0x41, 0x05, 0x00, 0x01, 0x00, 0xF8, 0x02, 0x00}, 8);
-		//    Senden    :    41 05 00 01 00 F8 02 00
-		//    Empfangen : 06 41 07 01 01 00 F8 02 20 B8 DB
-		//    Auswertung: 0x20B8 = V333MW1
-		pVitoS->write( ( uint8_t[]){ 0x41, 0x05, 0x00, 0x01, pAdrBit1, pAdrBit2, pLenBit, ( 6 + pAdrBit1 + pAdrBit2 + pLenBit) % 256}, 8);
-		pStatus = WaitForAnswer;
+		Data[ Data[1] + 2] = 0;
+		for (uint8_t i = 1; i < Data[1] + 2; i++) {
+			Msg( 2, Data[i], HEX);
+			Msg( 2, ( " ")); 
+			Data[ Data[1] + 2] += Data[i];
+    }
+		Msg( 2, ( "- ")); 
+  	Msg( 2, Data[ Data[1] + 2], HEX);
+		if (Data[ Data[1] + 2] != Data[ Data[1] + 2] % 256) 
+		  	Msg( 2, "\n \n --------- \n Vito Prüfsumme falsch \n ----------- \n  \n");
+		Msg( 2, "\n");
+		pAdrBit1 = Data[4];
+		pAdrBit2 = Data[5];
+		pLenBit = Data[6];
 		pByteNum = 0;
-    
+		pVitoS->write(Data, Data[1] + 3);
+		pStatus = WaitForAnswer;
     pWaitForAnswerSince=zp;
     break;
   case WaitForAnswer:
@@ -194,19 +201,21 @@ uint32_t zp = millis();
         break;
       default:
         if ( pByteNum < dataLength + 3) {
-          Msg( 2, ( ",Byte")); 
+          Msg( 2, ( "Byte")); 
           Msg( 2, pByteNum); 
           Msg( 2, ( "="));
           Msg( 2, B, HEX);
+          Msg( 2, ( ","));
           uint8_t lVByte = pByteNum - 8;
           Data[lVByte] = B;
         }
         else {
-          Msg( 2, ( ",CheckSum=")); 
+          Msg( 2, ( "CheckSum=")); 
           Msg( 2, B, HEX);
           //        if ( Prüfsumme falsch)
           //        BIGLog = true;
-					currentonValueReadCallback(pAdrBit1,pAdrBit2,dataLength,Data);
+					if ( dataLength > 5) 
+					  currentonValueReadCallback(pAdrBit1,pAdrBit2,dataLength,Data);
           pStatus = Initialized;
         }
       }
@@ -249,10 +258,38 @@ void Vitodens::Msg(uint8_t LogLevel, const uint8_t& theNumber, const int& Type){
 }
 
 void Vitodens::beginReadValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t LenBit ) {
-	pAdrBit1   = AdrBit1;
-	pAdrBit2   = AdrBit2;
-	pLenBit    = LenBit;
-	pStatus    = BeginReading;
+		// Gerätekennung abfragen
+		//    pVitoS->write( ( uint8_t[]){ 0x41, 0x05, 0x00, 0x01, 0x00, 0xF8, 0x02, 0x00}, 8);
+		//    Senden    :    41 05 00 01 00 F8 02 00
+		//    Empfangen : 06 41 07 01 01 00 F8 02 20 B8 DB
+		//    Auswertung: 0x20B8 = V333MW1
+	 Data[0] = 0x41;	
+	 Data[1] = 0x05;
+	 Data[2] = 0x00;
+	 Data[3] = 0x01;
+	 Data[4] = AdrBit1;
+	 Data[5] = AdrBit2;
+	 Data[6] = LenBit;
+	pStatus    = SendDatagram;
+}
+void Vitodens::beginWriteValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t DataBit ) {
+	//Beispiel Vitodens 333 Betriebsart schreiben:
+  //  Senden 41 06 00 02 23 23 01 XY xx
+  //  Empfangen 06 41 06 01 02 23 23 01 XY xx XY:
+  //  0 = Abschalten
+  //  1 = nur WW
+  //  2 = Heizen mit WW
+  //  3 = immer Reduziert
+  //  4 = immer Normal
+	 Data[0] = 0x41;	
+	 Data[1] = 0x06;
+	 Data[2] = 0x00;
+	 Data[3] = 0x02;
+	 Data[4] = AdrBit1;
+	 Data[5] = AdrBit2;
+	 Data[6] = 0x01;
+	 Data[7] = DataBit;
+	pStatus    = SendDatagram;
 }
 
 bool Vitodens::awaitingCommand(){

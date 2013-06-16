@@ -15,7 +15,7 @@
 
 extern "C" {
 // callback function types
-    typedef void (*onMsgFunction)(uint8_t, char*);
+    typedef void (*onMsgFunction)(uint8_t LogLevel, char* Msg);
     typedef void (*onValueReadCallbackFunction)(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t Length, uint8_t* Data);
 }
 
@@ -28,6 +28,7 @@ public:
   void attach(onValueReadCallbackFunction newFunction);
 	void doEvents();
 	void beginReadValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t LenBit );
+  void beginWriteValue(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t DataBit );
 	bool awaitingCommand();
 	bool dataAvailable();
   
@@ -40,15 +41,12 @@ private:
 	  WaitForConnectionOffer,
 	  NotInitialized,
 	  Initialized,
-		BeginReading,
+		SendDatagram,
 	  WaitForAnswer
 	} ;
 	pStatusEnm pStatus;
 	HardwareSerial *pVitoS;
 //	Stream *pDebug;
-	uint8_t pAdrBit1; 
-	uint8_t pAdrBit2;
-	uint8_t pLenBit;
 	uint8_t pByteNum;
 	uint32_t pWaitForAnswerSince;
   uint8_t Data[16];
