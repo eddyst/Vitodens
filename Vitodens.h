@@ -15,7 +15,7 @@
 
 extern "C" {
 // callback function types
-    typedef void (*onMsgFunction)(uint8_t LogLevel, char* Msg);
+    typedef void (*onMsgFunction)(uint8_t LogLevel, const char* Msg);
     typedef void (*onValueReadCallbackFunction)(uint8_t AdrBit1, uint8_t AdrBit2, uint8_t Length, uint8_t* Data);
 }
 
@@ -33,7 +33,8 @@ public:
 	bool dataAvailable();
   
 private:
-  void Msg(uint8_t LogLevel, char* msg);
+	void Msg(uint8_t LogLevel, const char* msg);
+//    void Msg(uint8_t LogLevel, const __FlashStringHelper* msg);
 	void Msg(uint8_t LogLevel, const uint8_t& theNumber);
 	void Msg(uint8_t LogLevel, const uint8_t& theNumber, const int& Type);
 	enum pStatusEnm{

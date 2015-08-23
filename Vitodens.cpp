@@ -53,7 +53,8 @@ static 	uint8_t pAdrBit1, pAdrBit2, pLenBit;
       if ( B == 0x05) {
         Msg( 2, ( "Read0x05,Write0x16_0x00_0x00,"));
         pStatus = NotInitialized;
-        pVitoS->write( ( uint8_t[]){ 0x16, 0x00, 0x00}, 3);
+		const uint8_t buff[] = { 0x16, 0x00, 0x00 };
+        pVitoS->write( buff, sizeof(buff));
         pWaitForAnswerSince=zp;
         break;
       }
@@ -222,10 +223,19 @@ static 	uint8_t pAdrBit1, pAdrBit2, pLenBit;
       pByteNum ++;
     }
   }  
+void Vitodens::Msg(uint8_t LogLevel, const char* msg){
+	currentOnMsg(LogLevel, msg);
 }
-void Vitodens::Msg(uint8_t LogLevel, char* msg){
-  currentOnMsg (LogLevel, msg);
+
+/*
+void Vitodens::Msg(uint8_t LogLevel, const __FlashStringHelper* msg) {
+	char buffer[20]; //Size array as needed.
+	int cursor = 0;
+	prog_char *ptr = (prog_char *)msg;
+	while ((buffer[cursor] = pgm_read_byte_near(ptr + cursor)) != '\0') ++cursor;
+	currentOnMsg(LogLevel, buffer);
 }
+*/
 void Vitodens::Msg(uint8_t LogLevel, const uint8_t& theNumber){
 	Msg( LogLevel, theNumber, DEC);
 }
